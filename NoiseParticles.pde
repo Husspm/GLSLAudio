@@ -11,9 +11,9 @@ void setup() {
   background(0);
   partCanvas = createGraphics(width, height, P3D);
   shade = loadShader("brcosa6.glsl");
-  p = new Particle[1200];
+  p = new Particle[600];
   for (int i = 0; i < p.length; i ++) {
-    p[i] = new Particle();
+    p[i] = new Particle(i);
   }
   mic = new AudioIn(this, 0);
   vol = new Amplitude(this);
@@ -47,33 +47,41 @@ void draw() {
 
 
 class Particle {
-  PVector pos, acc, spawn;
+  PVector pos, acc, spawn, upwards;
+  int prevIndex;
   float noiseVal = 0;
   float angleOffset;
-  float noiseScale = 0.04;
+  float noiseScale = 0.0004;
   float sizeMax;
-  Particle() {
+  Particle(int index) {
+    prevIndex = index - 1;
     pos = new PVector(width / 2, height / 2);
     spawn = pos;
-    acc = new PVector(random(0.8, 1.3), random(0.9, 1.3));
-    angleOffset = acc.x * 0.003;
-    sizeMax = acc.x * 74;
+    acc = new PVector(random(1.8, 2.3), random(1.9, 2.3));
+    upwards = new PVector(0, -0.5);
+    angleOffset = acc.x * 0.03;
+    sizeMax = acc.x * 52;
   }
   void move(float vol) {
     noiseVal += angleOffset;
     float angle = noise(pos.x * noiseScale, pos.y * noiseScale, noiseVal);
-    acc.rotate(map(angle, 0, 1, -PI / 16, PI / 16));
-    pos.add(acc.copy().mult(vol * 4));
+    if (prevIndex != -1) {
+      pos.add(upwards.copy().rotate(
+        dist(pos.x, pos.y, p[prevIndex].pos.x, p[prevIndex].pos.y) / 20));
+    }
+    acc.rotate(map(angle, 0, 1, -PI / 64, PI / 64));
+    pos.add(acc.copy().mult(0.46));
+    pos.add(upwards);
     this.display(angle, vol);
   }
   void display(float angle, float vol) {
     partCanvas.noStroke();
-    partCanvas.fill(angle * 300, 200, 0, 20);
+    partCanvas.fill(angle * 300, 200, noise(angle) * 250, 20);
     //dist(spawn.x, spawn.y, pos.x, pos.y) * 0.095);
     float newPosX = map(pos.x, 0, width, width, 0);
-    //float newPosY = map(pos.y, 0, height, height, 0);
+    float newPosY = map(pos.y, 0, height, height, 0);
     partCanvas.ellipse(pos.x, pos.y, angle * sizeMax, angle * sizeMax);
-    partCanvas.ellipse(newPosX, pos.y, angle * sizeMax, map(angle, 0, 1, 1, 0) * sizeMax);
+    //partCanvas.ellipse(newPosX, pos.y, angle * sizeMax, map(angle, 0, 1, 1, 0) * sizeMax);
     //partCanvas.ellipse(newPosX, newPosY, angle * sizeMax, map(angle, 0, 1, 1, 0) * sizeMax);
     //partCanvas.ellipse(pos.x, newPosY, angle * sizeMax, map(angle, 0, 1, 1, 0) * sizeMax);
   }
@@ -88,6 +96,9 @@ class Particle {
 }
 void mousePressed() {
   background(0);
+  partCanvas.beginDraw();
+  partCanvas.background(0);
+  partCanvas.endDraw();
   for (Particle p : p) {
     p.pos.x = mouseX;
     p.pos.y = mouseY;
